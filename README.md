@@ -1,2 +1,7 @@
-# kernel_build_action
-https://github.com/marketplace/actions/android-kernel-build-action
+# Simple KernelSU builder
+
+# Guide
+- fork this repo
+- update your build.yml
+- then go to action > workflow > start building.
+@danteoss / @dantepaulxd

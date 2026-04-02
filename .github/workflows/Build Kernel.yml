@@ -30,8 +30,11 @@ on:
         default: 'AnyKernel + Image'
         options:
           - 'AnyKernel (Zip)'
-          - 'Raw Image (boot.img)'
+          - 'Raw Kernel (Image.gz-dtb)'
           - 'AnyKernel + Image'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Fixes the deprecation warning
 
 jobs:
   build:
@@ -55,6 +58,8 @@ jobs:
       - name: Clone Kernel Source
         run: |
           git clone --depth=1 -b ${{ github.event.inputs.kernel_branch }} ${{ github.event.inputs.kernel_source }} kernel-source
+          echo "LATEST_COMMIT=$(git -C kernel-source rev-parse HEAD)" >> $GITHUB_ENV
+          echo "SHORT_COMMIT=$(git -C kernel-source rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Setup Toolchain (Clang)
         run: |
@@ -67,16 +72,18 @@ jobs:
           fi
           [ -d "clang/.git" ] && cd clang && git lfs pull || true
 
-      - name: Build Kernel (with Logging)
+      - name: Build Kernel
+        id: build_kernel
         run: |
           cd kernel-source
           
-          # 1. Integrate KSU if link is provided
+          # 1. Integrate KSU & Get Version
           if [ ! -z "${{ github.event.inputs.ksu_source }}" ]; then
-             echo "Integrating KernelSU from ${{ github.event.inputs.ksu_source }}..."
              curl -LSs "${{ github.event.inputs.ksu_source }}" | bash
+             KSU_VERSION=$(sed -n 's/.*KERNELSU_VERSION_STR "\(.*\)".*/\1/p' drivers/kernelsu/ksu.h 2>/dev/null || echo "v-custom")
+             echo "KSU_TAG=KSU-$KSU_VERSION-" >> $GITHUB_ENV
           else
-             echo "KernelSU link empty, skipping integration."
+             echo "KSU_TAG=" >> $GITHUB_ENV
           fi
 
           # 2. Setup Environment
@@ -87,20 +94,13 @@ jobs:
           
           # 3. Compile
           make O=out ARCH=arm64 RMX2020_defconfig 2>&1 | tee ../build.log
-          
-          make -j$(nproc --all) O=out \
-                      ARCH=arm64 \
-                      CC="clang" \
-                      CLANG_TRIPLE=aarch64-linux-gnu- \
-                      CROSS_COMPILE=aarch64-linux-android- \
-                      LLVM=1 \
-                      CONFIG_NO_ERROR_ON_MISMATCH=y 2>&1 | tee -a ../build.log
+          make -j$(nproc --all) O=out ARCH=arm64 CC="clang" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-android- LLVM=1 CONFIG_NO_ERROR_ON_MISMATCH=y 2>&1 | tee -a ../build.log
 
-      - name: Upload Build Log (On Failure)
-        if: failure()
+      - name: Upload Build Log (Always)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Failure-Log
+          name: Full-Build-Log-${{ env.SHORT_COMMIT }}
           path: build.log
 
       - name: Prepare Artifacts
@@ -109,18 +109,22 @@ jobs:
           IMAGE_PATH="kernel-source/out/arch/arm64/boot/Image.gz-dtb"
           OUT_DIR="${{ github.workspace }}/out_assets"
           mkdir -p $OUT_DIR
+          
+          DATE_STR=$(date +%Y%m%d-%H%M)
+          BASE_NAME="${{ env.KSU_TAG }}Satori-${{ github.event.inputs.kernel_branch }}-$DATE_STR"
+          echo "FINAL_NAME=$BASE_NAME" >> $GITHUB_ENV
 
           if [[ "${{ github.event.inputs.output_type }}" == *"Image"* ]]; then
-            cp $IMAGE_PATH $OUT_DIR/boot.img
+            cp $IMAGE_PATH $OUT_DIR/Image.gz-dtb
           fi
 
           if [[ "${{ github.event.inputs.output_type }}" == *"AnyKernel"* ]]; then
             git clone --depth=1 ${{ github.event.inputs.ak3_source }} AnyKernel
             cp $IMAGE_PATH AnyKernel/
             cd AnyKernel
-            zip -r9 ../Kernel-Build.zip ./*
+            zip -r9 ../$BASE_NAME.zip ./*
             cd ..
-            mv Kernel-Build.zip $OUT_DIR/
+            mv $BASE_NAME.zip $OUT_DIR/
           fi
 
       - name: Create GitHub Release (Draft)
@@ -128,16 +132,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          RELEASE_TAG="Build-$(date +%Y%m%d-%H%M)"
-          gh release create "$RELEASE_TAG" --draft \
-            --title "Kernel Build: $RELEASE_TAG" \
-            --notes "Kernel Source: ${{ github.event.inputs.kernel_source }}
-            Branch: ${{ github.event.inputs.kernel_branch }}
-            AnyKernel3: ${{ github.event.inputs.ak3_source }}" \
+          gh release create "${{ env.FINAL_NAME }}" --draft \
+            --title "${{ env.FINAL_NAME }}" \
+            --notes "### Kernel Build Details
+            * **Kernel Source:** [Here](${{ github.event.inputs.kernel_source }})
+            * **Latest Commit:** [${{ env.SHORT_COMMIT }}](${{ github.event.inputs.kernel_source }}/commit/${{ env.LATEST_COMMIT }})
+            * **Branch:** ${{ github.event.inputs.kernel_branch }}
+            * **KernelSU:** ${{ env.KSU_TAG || 'None' }}
+            * **AnyKernel3:** ${{ github.event.inputs.ak3_source }}" \
             ${{ github.workspace }}/out_assets/*
 
       - name: Post-Build Cleanup
         if: always()
         run: |
           rm -rf kernel-source clang AnyKernel out_assets build.log
-          echo "Cleanup complete."

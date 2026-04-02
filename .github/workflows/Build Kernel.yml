@@ -75,28 +75,30 @@ jobs:
         run: |
           cd kernel-source
           
-          # 1. Integrate KSU
+          # 1. Fetch LocalVersion from Defconfig
+          # This grabs the value, removes quotes, and removes a leading '-' if present
+          LV_NAME=$(grep "CONFIG_LOCALVERSION=" arch/arm64/configs/RMX2020_defconfig | cut -d '"' -f2 | sed 's/^-//')
+          [ -z "$LV_NAME" ] && LV_NAME="Kernel"
+          echo "LV_NAME=$LV_NAME" >> $GITHUB_ENV
+
+          # 2. Integrate KSU & Fetch Version
           if [ ! -z "${{ github.event.inputs.ksu_source }}" ]; then
-             echo "Integrating KernelSU Branch: ${{ github.event.inputs.ksu_branch }}" | tee ../build.log
-             curl -LSs "${{ github.event.inputs.ksu_source }}" | bash -s ${{ github.event.inputs.ksu_branch }} 2>&1 | tee -a ../build.log
-             KSU_VERSION=$(sed -n 's/.*KERNELSU_VERSION_STR "\(.*\)".*/\1/p' drivers/kernelsu/ksu.h 2>/dev/null || echo "v-custom")
-             echo "KSU_TAG=KSU-$KSU_VERSION-" >> $GITHUB_ENV
+              curl -LSs "${{ github.event.inputs.ksu_source }}" | bash -s ${{ github.event.inputs.ksu_branch }} 2>&1 | tee -a ../build.log
+              KSU_VER=$(curl -s https://api.github.com/repos/backslashxx/KernelSU/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+              [ -z "$KSU_VER" ] && KSU_VER="v-custom"
+              echo "KSU_TAG=KSU-$KSU_VER" >> $GITHUB_ENV
           else
-             echo "KSU_TAG=" >> $GITHUB_ENV
-             echo "Skipping KernelSU integration" | tee ../build.log
+              echo "KSU_TAG=NoKSU" >> $GITHUB_ENV
           fi
 
-          # 2. Setup Environment
+          # 3. Setup Environment
           export ARCH=arm64
           export KBUILD_BUILD_HOST=Satori
           export KBUILD_BUILD_USER="dantepaulxd"
           export PATH="${{ github.workspace }}/clang/bin:${PATH}"
           
-          # 3. Compile
-          echo "Starting Defconfig..." | tee -a ../build.log
+          # 4. Compile
           make O=out ARCH=arm64 RMX2020_defconfig 2>&1 | tee -a ../build.log
-          
-          echo "Starting Compilation..." | tee -a ../build.log
           make -j$(nproc --all) O=out ARCH=arm64 CC="clang" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-android- LLVM=1 CONFIG_NO_ERROR_ON_MISMATCH=y 2>&1 | tee -a ../build.log
 
       - name: Uploading Logs
@@ -114,7 +116,8 @@ jobs:
           mkdir -p $OUT_DIR
           
           DATE_STR=$(date +%Y%m%d-%H%M)
-          BASE_NAME="${{ env.KSU_TAG }}Satori-${{ github.event.inputs.kernel_branch }}-$DATE_STR"
+          # Result example: KSU-v0.9.5-Satori-16.0-KSU-20260402.zip
+          BASE_NAME="${{ env.KSU_TAG }}-${{ env.LV_NAME }}-${{ github.event.inputs.kernel_branch }}-$DATE_STR"
           echo "FINAL_NAME=$BASE_NAME" >> $GITHUB_ENV
 
           git clone --depth=1 -b ${{ github.event.inputs.ak3_branch }} ${{ github.event.inputs.ak3_source }} AnyKernel
@@ -129,14 +132,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Clean source URL to ensure links work
+          CLEAN_SOURCE=$(echo "${{ github.event.inputs.kernel_source }}" | sed 's/\.git$//')
+          
           gh release create "${{ env.FINAL_NAME }}" --draft \
             --title "${{ env.FINAL_NAME }}" \
             --notes "### Kernel Build Details
-            * **Kernel Source:** [Here](${{ github.event.inputs.kernel_source }})
-            * **Latest Commit:** [${{ env.SHORT_COMMIT }}](${{ github.event.inputs.kernel_source }}/commit/${{ env.LATEST_COMMIT }})
-            * **Branch:** ${{ github.event.inputs.kernel_branch }}
-            * **KernelSU:** ${{ env.KSU_TAG || 'None' }} (Branch: ${{ github.event.inputs.ksu_branch }})
-            * **AnyKernel3:** [${{ github.event.inputs.ak3_branch }}](${{ github.event.inputs.ak3_source }}/tree/${{ github.event.inputs.ak3_branch }})" \
+            * **Kernel Source:** [${{ github.event.inputs.kernel_branch }}]($CLEAN_SOURCE/tree/${{ github.event.inputs.kernel_branch }})
+            * **Latest Commit:** [${{ env.SHORT_COMMIT }}]($CLEAN_SOURCE/commit/${{ env.LATEST_COMMIT }})
+            * **KernelSU:** ${{ env.KSU_TAG }}" \
             ${{ github.workspace }}/out_assets/*
 
       - name: Build Cleanups

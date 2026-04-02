@@ -1,4 +1,4 @@
-# Simple KernelSU builder
+# Simple Kernel builder
 
 # Guide
 - fork this repo

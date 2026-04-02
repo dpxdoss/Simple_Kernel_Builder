@@ -24,11 +24,11 @@ on:
         required: true
         default: 'RMX2020'
       ksu_source:
-        description: 'KernelSU Setup Link (Leave empty to skip)'
+        description: 'KernelSU Setup Link (Optional)'
         required: false
         default: 'https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh'
       ksu_branch:
-        description: 'KernelSU Branch'
+        description: 'KernelSU Branch (Optional)'
         required: false
         default: 'master'
 

@@ -36,7 +36,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build:
+  build-kernel:
     runs-on: ubuntu-latest
     permissions:
       contents: write

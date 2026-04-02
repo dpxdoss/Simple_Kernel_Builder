@@ -6,7 +6,7 @@ on:
       kernel_source:
         description: 'Kernel Source Link'
         required: true
-        default: 'https://github.com/crdroidandroid/android_kernel_realme_RMX2020.git'
+        default: 'https://github.com/dpxdoss/android_kernel_realme_RMX2020'
       kernel_branch:
         description: 'Kernel Branch'
         required: true

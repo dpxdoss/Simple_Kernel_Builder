@@ -75,33 +75,30 @@ jobs:
           cd kernel-source
           
           # 1. Detect Defconfig and Device Name
-          # Automatically finds the first file ending in _defconfig
           DEFCONFIG=$(ls arch/arm64/configs/ | grep "_defconfig" | head -n 1)
           DEVICE=$(echo $DEFCONFIG | sed 's/_defconfig//')
           echo "DEVICE=$DEVICE" >> $GITHUB_ENV
           echo "DEFCONFIG=$DEFCONFIG" >> $GITHUB_ENV
 
           # 2. Extract Kernel Name (CONFIG_LOCALVERSION)
-          # Removes quotes and leading hyphens
-          LV_NAME=$(grep "CONFIG_LOCALVERSION=" arch/arm64/configs/$DEFCONFIG | cut -d '=' -f2 | tr -d '"' | sed 's/^-//')
-          [ -z "$LV_NAME" ] && LV_NAME="Custom"
+          # Improved regex to find the version name even if it starts with a hyphen
+          LV_NAME=$(grep "CONFIG_LOCALVERSION=" arch/arm64/configs/$DEFCONFIG | sed 's/.*="//;s/".*//;s/^-//')
+          [ -z "$LV_NAME" ] && LV_NAME="Kernel"
           echo "LV_NAME=$LV_NAME" >> $GITHUB_ENV
 
           # 3. KSU Integration & APK Downloader
           if [ ! -z "${{ github.event.inputs.ksu_source }}" ]; then
               curl -LSs "${{ github.event.inputs.ksu_source }}" | bash -s ${{ github.event.inputs.ksu_branch }}
               
-              # Identify flavor (Next vs Official)
               if [ -d "drivers/kernelsu" ]; then KSU_TYPE="KernelSU"; KSU_REPO="backslashxx/KernelSU"; 
               elif [ -d "drivers/ksu" ]; then KSU_TYPE="KernelSU-Next"; KSU_REPO="tiann/KernelSU"; 
               else KSU_TYPE="KSU"; KSU_REPO="backslashxx/KernelSU"; fi
               
-              # Fetch Manager APK
               KSU_DATA=$(curl -s https://api.github.com/repos/$KSU_REPO/releases/latest)
               KSU_VER=$(echo $KSU_DATA | jq -r .tag_name)
               APK_URL=$(echo $KSU_DATA | jq -r '.assets[] | select(.name | contains("apk")) | .browser_download_url' | head -n 1)
               
-              curl -L $APK_URL -o ../${KSU_TYPE}_Manager_${KSU_VER}.apk
+              curl -L "$APK_URL" -o "../${KSU_TYPE}_Manager_${KSU_VER}.apk"
               echo "KSU_INFO=${KSU_TYPE}-${KSU_VER}" >> $GITHUB_ENV
           else
               echo "KSU_INFO=NoKSU" >> $GITHUB_ENV
@@ -120,17 +117,16 @@ jobs:
       - name: Prepare Assets
         if: success()
         run: |
-          # Find the compiled Image (supports Image.gz-dtb or standard Image.gz)
           IMAGE=$(find kernel-source/out/arch/arm64/boot -name "Image.gz*" | head -n 1)
           OUT_DIR="${{ github.workspace }}/out_assets"
           mkdir -p $OUT_DIR
           
-          # Use User-Specific AnyKernel3 from inputs
           git clone --depth=1 -b ${{ github.event.inputs.ak3_branch }} ${{ github.event.inputs.ak3_source }} AnyKernel
           
-          DATE_STR=$(date +%Y%m%d-%H%M)
-          # Final Name Format: KSU-v1.0-Satori-RMX2020-20260402.zip
-          BASE_NAME="${{ env.KSU_INFO }}-${{ env.LV_NAME }}-${{ env.DEVICE }}-$DATE_STR"
+          # Custom Date Format (DDMMYY-HHMM)
+          DATE_STR=$(date +%d%m%y-%H%M)
+          # Format: Satori_KernelSU-v0.9.5_RMX2020_020426-1850.zip
+          BASE_NAME="${{ env.LV_NAME }}_${{ env.KSU_INFO }}_${{ env.DEVICE }}_$DATE_STR"
           echo "FINAL_NAME=$BASE_NAME" >> $GITHUB_ENV
 
           cp $IMAGE AnyKernel/
@@ -138,7 +134,6 @@ jobs:
           zip -r9 ../$BASE_NAME.zip ./*
           cd ..
           
-          # Collect assets for release
           mv $BASE_NAME.zip $OUT_DIR/
           [ -f *.apk ] && mv *.apk $OUT_DIR/
 
@@ -161,4 +156,4 @@ jobs:
       - name: Build Cleanups
         if: always()
         run: |
-          rm -rf kernel-source clang AnyKernel out_assets build.log
+          rm -rf kernel-source clang AnyKernel out_assets

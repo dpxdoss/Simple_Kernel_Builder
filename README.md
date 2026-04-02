@@ -3,7 +3,12 @@
 # Guide
 - fork this repo
 - update your build.yml
-- then go to action > workflow > start building.
+( for regular building )
+- then go to action >
+- Build Kernel >
+- run workflow >
+- enter your sources
+- Run workflow
 #
 
 by dantepaulxd / danteoss

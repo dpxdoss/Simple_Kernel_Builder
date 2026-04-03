@@ -33,21 +33,25 @@ on:
         default: 'master'
 
 env:
-
+  # ==========================================
+  # 🛠️ USER CONFIGURATION
+  # ==========================================
   BUILD_HOST: ReviveMeJett         # Zip Name Prefix
   BUILD_USER: dantepaulxd          # Kernel Builder Name
   
+  # 🚀 BUILD FEATURES
   USE_LLVM: 1                      # 1 for Clang/LLVM, 0 for GCC
   USE_KSU: true                    # Toggle KernelSU integration
+  FETCH_KSU_APK: true              # Download & include KSU Manager APK in release
   NO_ERROR_ON_MISMATCH: y          # Ignore non-critical compiler warnings (y/n)
   
+  # 📦 RELEASE SETTINGS
   POST_AS_DRAFT: true              # true = Draft, false = Public Release
   INCLUDE_DATE: true               # Add date/time suffix to zip name
-  INCLUDE_VERSION: true            # Add auto-fetched version to zip name
   
-  # Add extra flags here 
-  # e.g., "LLVM_IAS=1" or "DTC_EXT=dtc"
+  # ⚙️ ADVANCED
   EXTRA_MAKE_FLAGS: "" 
+  # ==========================================
 
 jobs:
   build-kernel:
@@ -73,14 +77,6 @@ jobs:
           git clone --depth=1 -b ${{ github.event.inputs.kernel_branch }} ${{ github.event.inputs.kernel_source }} kernel-source
           echo "LATEST_COMMIT=$(git -C kernel-source rev-parse HEAD)" >> $GITHUB_ENV
           echo "SHORT_COMMIT=$(git -C kernel-source rev-parse --short HEAD)" >> $GITHUB_ENV
-          
-          # AUTO-VERSION FETCH: Gets version from kernel Makefile
-          cd kernel-source
-          VERSION=$(grep -E "^VERSION =" Makefile | awk '{print $3}')
-          PATCHLEVEL=$(grep -E "^PATCHLEVEL =" Makefile | awk '{print $3}')
-          SUBLEVEL=$(grep -E "^SUBLEVEL =" Makefile | awk '{print $3}')
-          EXTRAVERSION=$(grep -E "^EXTRAVERSION =" Makefile | awk '{print $3}')
-          echo "FULL_VERSION=v$VERSION.$PATCHLEVEL.$SUBLEVEL$EXTRAVERSION" >> $GITHUB_ENV
 
       - name: Cloning Clang
         run: |
@@ -101,15 +97,24 @@ jobs:
           echo "DEFCONFIG=$DEFCONFIG" >> $GITHUB_ENV
 
           if [ "${{ env.USE_KSU }}" = "true" ] && [ ! -z "${{ github.event.inputs.ksu_source }}" ]; then
+              # Patch the source
               curl -LSs "${{ github.event.inputs.ksu_source }}" | bash -s ${{ github.event.inputs.ksu_branch }}
+              
+              # Identify KSU Type
               if [ -d "drivers/kernelsu" ]; then KSU_TYPE="KernelSU"; KSU_REPO="backslashxx/KernelSU"; 
               elif [ -d "drivers/ksu" ]; then KSU_TYPE="KernelSU-Next"; KSU_REPO="tiann/KernelSU"; 
               else KSU_TYPE="KSU"; KSU_REPO="backslashxx/KernelSU"; fi
+              
+              # Fetch latest version for naming
               KSU_DATA=$(curl -s https://api.github.com/repos/$KSU_REPO/releases/latest)
               KSU_VER=$(echo $KSU_DATA | jq -r .tag_name)
-              APK_URL=$(echo $KSU_DATA | jq -r '.assets[] | select(.name | contains("apk")) | .browser_download_url' | head -n 1)
-              curl -L "$APK_URL" -o "../${KSU_TYPE}_Manager_${KSU_VER}.apk"
               echo "KSU_INFO=${KSU_TYPE}-${KSU_VER}" >> $GITHUB_ENV
+              
+              # Optional APK Download
+              if [ "${{ env.FETCH_KSU_APK }}" = "true" ]; then
+                APK_URL=$(echo $KSU_DATA | jq -r '.assets[] | select(.name | contains("apk")) | .browser_download_url' | head -n 1)
+                curl -L "$APK_URL" -o "../${KSU_TYPE}_Manager_${KSU_VER}.apk"
+              fi
           else
               echo "KSU_INFO=NoKSU" >> $GITHUB_ENV
           fi
@@ -138,9 +143,7 @@ jobs:
           git clone --depth=1 -b ${{ github.event.inputs.ak3_branch }} ${{ github.event.inputs.ak3_source }} AnyKernel
           
           [ "${{ env.INCLUDE_DATE }}" = "true" ] && DATE_STR="_$(date +%d%m%y-%H%M)" || DATE_STR=""
-          [ "${{ env.INCLUDE_VERSION }}" = "true" ] && VER_STR="_${{ env.FULL_VERSION }}" || VER_STR=""
-          
-          BASE_NAME="${{ env.BUILD_HOST }}${VER_STR}_${{ env.KSU_INFO }}_${{ env.DEVICE }}${DATE_STR}"
+          BASE_NAME="${{ env.BUILD_HOST }}_${{ env.KSU_INFO }}_${{ env.DEVICE }}${DATE_STR}"
           echo "FINAL_NAME=$BASE_NAME" >> $GITHUB_ENV
 
           cp $IMAGE AnyKernel/
@@ -163,7 +166,6 @@ jobs:
             --title "${{ env.FINAL_NAME }}" \
             --notes "### Kernel Build Details
             * **Kernel Name:** ${{ env.BUILD_HOST }}
-            * **Kernel Version:** ${{ env.FULL_VERSION }}
             * **Device:** ${{ env.DEVICE }}
             * **Source:** [${{ github.event.inputs.kernel_branch }}]($CLEAN_SOURCE/tree/${{ github.event.inputs.kernel_branch }})
             * **Latest Commit:** [${{ env.SHORT_COMMIT }}]($CLEAN_SOURCE/commit/${{ env.LATEST_COMMIT }})

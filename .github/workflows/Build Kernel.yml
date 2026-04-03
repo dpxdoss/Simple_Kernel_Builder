@@ -2,32 +2,56 @@ name: Build Kernel
 
 on:
   workflow_dispatch:
+    inputs:
+      kernel_source:
+        description: 'Kernel Repository Link'
+        required: true
+        default: 'https://github.com/dpxdoss/android_kernel_realme_RMX2020.git'
+      kernel_branch:
+        description: 'Kernel Branch'
+        required: true
+        default: '16.0-KSU'
+      clang_url:
+        description: 'Clang Toolchain Link'
+        required: true
+        default: 'https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-14.0.0_r50/clang-r510928.tar.gz'
+      ak3_source:
+        description: 'AnyKernel3 Repository Link'
+        required: true
+        default: 'https://github.com/dpxdoss/AnyKernel3.git'
+      ak3_branch:
+        description: 'AnyKernel3 Branch'
+        required: true
+        default: 'RMX2020'
+      ksu_source:
+        description: 'KernelSU Setup Script Link'
+        required: false
+        default: 'https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh'
+      ksu_branch:
+        description: 'KernelSU Branch'
+        required: false
+        default: 'master'
 
 env:
-
-  KERNEL_SOURCE: "https://github.com/dpxdoss/android_kernel_realme_RMX2020.git"
-  KERNEL_BRANCH: "16.0-KSU"
-
-  CLANG_URL: "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-14.0.0_r50/clang-r510928.tar.gz"
-
-  AK3_SOURCE: "https://github.com/dpxdoss/AnyKernel3.git"
-  AK3_BRANCH: "RMX2020"
-
-  KSU_SOURCE: "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh"
-  KSU_BRANCH: "master"
-
+  # ==========================================
+  # 🛠️ USER CONFIGURATION (BUILDER INFO)
+  # ==========================================
   BUILD_HOST: ReviveMeJett         # Zip Name Prefix
   BUILD_USER: dantepaulxd          # Kernel Builder Name
-
+  
+  # 🚀 FEATURE FLAGS
   USE_LLVM: 1                      # 1 for Clang/LLVM, 0 for GCC
   USE_KSU: true                    # Toggle KernelSU integration
   FETCH_KSU_APK: true              # Download & include KSU Manager APK in release
   NO_ERROR_ON_MISMATCH: y          # Ignore non-critical compiler warnings (y/n)
-
+  
+  # 📦 RELEASE SETTINGS
   POST_AS_DRAFT: true              # true = Draft, false = Public Release
   INCLUDE_DATE: true               # Add date/time suffix to zip name
-
+  
+  # ⚙️ ADVANCED
   EXTRA_MAKE_FLAGS: ""             # Example: "LLVM_IAS=1"
+  # ==========================================
 
 jobs:
   build-kernel:
@@ -50,18 +74,18 @@ jobs:
 
       - name: Cloning Kernel
         run: |
-          git clone --depth=1 -b ${{ env.KERNEL_BRANCH }} ${{ env.KERNEL_SOURCE }} kernel-source
+          git clone --depth=1 -b ${{ github.event.inputs.kernel_branch }} ${{ github.event.inputs.kernel_source }} kernel-source
           echo "LATEST_COMMIT=$(git -C kernel-source rev-parse HEAD)" >> $GITHUB_ENV
           echo "SHORT_COMMIT=$(git -C kernel-source rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Cloning Clang
         run: |
           mkdir -p clang
-          if [[ "${{ env.CLANG_URL }}" == *.tar.gz ]]; then
-            curl -LO "${{ env.CLANG_URL }}"
+          if [[ "${{ github.event.inputs.clang_url }}" == *.tar.gz ]]; then
+            curl -LO "${{ github.event.inputs.clang_url }}"
             tar -xf *.tar.gz -C clang
           else
-            git clone --depth=1 ${{ env.CLANG_URL }} clang
+            git clone --depth=1 ${{ github.event.inputs.clang_url }} clang
           fi
 
       - name: Building Kernel
@@ -72,8 +96,8 @@ jobs:
           echo "DEVICE=$DEVICE" >> $GITHUB_ENV
           echo "DEFCONFIG=$DEFCONFIG" >> $GITHUB_ENV
 
-          if [ "${{ env.USE_KSU }}" = "true" ] && [ ! -z "${{ env.KSU_SOURCE }}" ]; then
-              curl -LSs "${{ env.KSU_SOURCE }}" | bash -s ${{ env.KSU_BRANCH }}
+          if [ "${{ env.USE_KSU }}" = "true" ] && [ ! -z "${{ github.event.inputs.ksu_source }}" ]; then
+              curl -LSs "${{ github.event.inputs.ksu_source }}" | bash -s ${{ github.event.inputs.ksu_branch }}
               
               if [ -d "drivers/kernelsu" ]; then KSU_TYPE="KernelSU"; KSU_REPO="backslashxx/KernelSU"; 
               elif [ -d "drivers/ksu" ]; then KSU_TYPE="KernelSU-Next"; KSU_REPO="tiann/KernelSU"; 
@@ -112,7 +136,7 @@ jobs:
           IMAGE=$(find kernel-source/out/arch/arm64/boot -name "Image.gz*" | head -n 1)
           OUT_DIR="${{ github.workspace }}/out_assets"
           mkdir -p $OUT_DIR
-          git clone --depth=1 -b ${{ env.AK3_BRANCH }} ${{ env.AK3_SOURCE }} AnyKernel
+          git clone --depth=1 -b ${{ github.event.inputs.ak3_branch }} ${{ github.event.inputs.ak3_source }} AnyKernel
           
           [ "${{ env.INCLUDE_DATE }}" = "true" ] && DATE_STR="_$(date +%d%m%y-%H%M)" || DATE_STR=""
           BASE_NAME="${{ env.BUILD_HOST }}_${{ env.KSU_INFO }}_${{ env.DEVICE }}${DATE_STR}"
@@ -130,7 +154,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          CLEAN_SOURCE=$(echo "${{ env.KERNEL_SOURCE }}" | sed 's/\.git$//')
+          CLEAN_SOURCE=$(echo "${{ github.event.inputs.kernel_source }}" | sed 's/\.git$//')
           DRAFT_FLAG=""
           [ "${{ env.POST_AS_DRAFT }}" = "true" ] && DRAFT_FLAG="--draft"
           
@@ -139,7 +163,7 @@ jobs:
             --notes "### Kernel Build Details
             * **Kernel Name:** ${{ env.BUILD_HOST }}
             * **Device:** ${{ env.DEVICE }}
-            * **Source:** [${{ env.KERNEL_BRANCH }}]($CLEAN_SOURCE/tree/${{ env.KERNEL_BRANCH }})
+            * **Source:** [${{ github.event.inputs.kernel_branch }}]($CLEAN_SOURCE/tree/${{ github.event.inputs.kernel_branch }})
             * **Latest Commit:** [${{ env.SHORT_COMMIT }}]($CLEAN_SOURCE/commit/${{ env.LATEST_COMMIT }})
             * **KSU Status:** ${{ env.KSU_INFO }}" \
             ${{ github.workspace }}/out_assets/*

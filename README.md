@@ -1,6 +1,7 @@
 # 📱 Universal Kernel Builder
 
-An automated GitHub Action for compiling Android kernels with integrated KernelSU support. Optimized for modern runners and multi-device compatibility.
+An GitHub Action for compiling Android kernels with integrated KernelSU support. 
+Optimized for modern runners and multi-device compatibility.
 
 ---
 
@@ -20,7 +21,7 @@ Click the **Run workflow** dropdown and provide your specific details:
 * **AnyKernel Link/Branch:** Your AnyKernel3 repository.
 
 * **KernelSU Link:** Setup script Link
-* - e.g., KSU Official, Next, or WildKSU. **Leave empty to skip KSU integration.**
+* e.g., KSU Official, Next, or WildKSU. **Leave empty to skip KSU integration.**
 
 **Click "Run workflow" to begin the process.**
 
@@ -29,17 +30,17 @@ Click the **Run workflow** dropdown and provide your specific details:
 ## 📝 Key Features & Details
 
 * **Smart Naming:**
-* - The workflow automatically generates a professional filename: `{KernelName}_{KSU-Version}_{Device}_{Date-Time}.zip`.
+* The workflow automatically generates a professional filename: `{KernelName}_{KSU-Version}_{Device}_{Date-Time}.zip`.
 * **Automatic KSU Detection:**
-* - Automatically identifies if you are using Official KernelSU or KernelSU-Next and fetches the matching Manager APK.
+* Automatically identifies if you are using Official KernelSU or KernelSU-Next and fetches the matching Manager APK.
 * **Universal Image Finding:**
-* - Automatically detects the compiled boot image (Image.gz, Image.gz-dtb, etc.) regardless of device architecture.
+* Automatically detects the compiled boot image (Image.gz, Image.gz-dtb, etc.) regardless of device architecture.
 * **Draft Releases:**
-* - Finished builds are uploaded as **Draft Releases**. You can review them before making them public.
+* Finished builds are uploaded as **Draft Releases**. You can review them before making them public.
 * **Native Logging:**
-* - Full compilation logs are available directly in the GitHub Actions console for easy troubleshooting.
+* Full compilation logs are available directly in the GitHub Actions console for easy troubleshooting.
 * **Node.js 24 Ready:**
-* - Uses the latest `actions/checkout@v5` to ensure compatibility with modern GitHub runners.
+* Uses the latest `actions/checkout@v5` to ensure compatibility with modern GitHub runners.
 
 ---
 

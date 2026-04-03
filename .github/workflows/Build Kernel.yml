@@ -4,54 +4,56 @@ on:
   workflow_dispatch:
     inputs:
       kernel_source:
-        description: 'Kernel Repository Link'
+        description: 'Kernel Link'
         required: true
+        # default kernel link
         default: 'https://github.com/dpxdoss/android_kernel_realme_RMX2020.git'
       kernel_branch:
         description: 'Kernel Branch'
         required: true
+        # default ksu branch
         default: '16.0-KSU'
       clang_url:
-        description: 'Clang Toolchain Link'
+        description: 'Clang Link'
         required: true
+        # default clang link
         default: 'https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-14.0.0_r50/clang-r510928.tar.gz'
       ak3_source:
-        description: 'AnyKernel3 Repository Link'
+        description: 'AnyKernel3 Link'
         required: true
+        # default anykernel link
         default: 'https://github.com/dpxdoss/AnyKernel3.git'
       ak3_branch:
         description: 'AnyKernel3 Branch'
         required: true
+        # default anykernel branch
         default: 'RMX2020'
       ksu_source:
-        description: 'KernelSU Setup Script Link'
+        description: 'KernelSU Link'
         required: false
+        # default ksu link
         default: 'https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh'
       ksu_branch:
         description: 'KernelSU Branch'
         required: false
+        # default ksu branch
         default: 'master'
 
 env:
-  # ==========================================
-  # 🛠️ USER CONFIGURATION (BUILDER INFO)
-  # ==========================================
+
   BUILD_HOST: ReviveMeJett         # Zip Name Prefix
   BUILD_USER: dantepaulxd          # Kernel Builder Name
   
-  # 🚀 FEATURE FLAGS
   USE_LLVM: 1                      # 1 for Clang/LLVM, 0 for GCC
   USE_KSU: true                    # Toggle KernelSU integration
-  FETCH_KSU_APK: true              # Download & include KSU Manager APK in release
   NO_ERROR_ON_MISMATCH: y          # Ignore non-critical compiler warnings (y/n)
   
-  # 📦 RELEASE SETTINGS
+
   POST_AS_DRAFT: true              # true = Draft, false = Public Release
   INCLUDE_DATE: true               # Add date/time suffix to zip name
+  FETCH_KSU_APK: true              # Download & include KSU Manager APK in release
   
-  # ⚙️ ADVANCED
   EXTRA_MAKE_FLAGS: ""             # Example: "LLVM_IAS=1"
-  # ==========================================
 
 jobs:
   build-kernel:

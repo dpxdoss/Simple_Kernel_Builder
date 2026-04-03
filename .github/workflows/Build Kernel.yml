@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       kernel_source:
-        description: 'Kernel Source Link'
+        description: 'Kernel Link'
         required: true
         default: 'https://github.com/dpxdoss/android_kernel_realme_RMX2020.git'
       kernel_branch:
@@ -12,7 +12,7 @@ on:
         required: true
         default: '16.0-KSU'
       clang_url:
-        description: 'Clang Source Link'
+        description: 'Clang Link'
         required: true
         default: 'https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-14.0.0_r50/clang-r510928.tar.gz'
       ak3_source:
@@ -24,17 +24,15 @@ on:
         required: true
         default: 'RMX2020'
       ksu_source:
-        description: 'KSU / KSUN / WILDKSU Script'
+        description: 'KernelSU Link'
         required: false
         default: 'https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh'
       ksu_branch:
-        description: 'KSU Branch'
+        description: 'KernelSU Branch'
         required: false
         default: 'master'
 
 env:
-  # Using Node 24 and newer actions to stop deprecation errors
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   BUILD_HOST: ReviveMeJett
   BUILD_USER: dantepaulxd
 
@@ -45,7 +43,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4 # v4 is fine, GitHub just likes to complain during transitions
+        uses: actions/checkout@v5
 
       - name: Install Dependencies
         run: |
@@ -109,7 +107,13 @@ jobs:
           
           # 4. Compile
           make O=out ARCH=arm64 $DEFCONFIG
-          make -j$(nproc --all) O=out ARCH=arm64 CC="clang" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-android- LLVM=1 CONFIG_NO_ERROR_ON_MISMATCH=y
+          make -j$(nproc --all) O=out \
+            ARCH=arm64 \
+            CC="clang" \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-android- \
+            LLVM=1 \
+            CONFIG_NO_ERROR_ON_MISMATCH=y
 
       - name: Prepare Assets
         if: success()

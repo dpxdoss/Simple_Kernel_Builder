@@ -14,7 +14,7 @@ Optimized for modern runners and multi-device compatibility.
 * Select **Build Kernel** from the workflow list on the left.
 
 ### 2. Launching a Build
-Click the **Run workflow** dropdown and provide your specific details:
+Click **Run workflow** and provide your specific details:
 
 * **Kernel Source / Branch:** Link of your kernel repository.
 * **Clang Link:** tar.gz direct link or a Git repo.
@@ -35,15 +35,15 @@ Click the **Run workflow** dropdown and provide your specific details:
 `{KernelName}_{KSU-Version}_{Device}_{Date-Time}.zip`.
 
 * **Automatic KSU Detection:**
-* Automatically identifies KSU type form link and
+Automatically identifies KSU type form link and
 fetches the matching Manager APK and upload with releases.
 
 * **Universal Image Finding:**
-* Automatically detects the compiled kernel image
+Automatically detects the compiled kernel image
 (Image.gz, Image.gz-dtb, etc.) regardless of device architecture.
 
 * **Draft Releases:**
-* by Default builds are uploaded as **Draft Releases**.
+by Default builds are uploaded as **Draft Releases**.
 You can review them before making them public.
 
 * **Native Logging:**

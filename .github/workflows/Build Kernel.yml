@@ -29,12 +29,12 @@ on:
         # default anykernel branch
         default: 'RMX2020'
       ksu_source:
-        description: 'KernelSU Link (Empty to skip)'
+        description: 'KernelSU Link (leave empty to skip)'
         required: false
         # default ksu link
         default: 'https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh'
       ksu_branch:
-        description: 'KernelSU Branch'
+        description: 'KernelSU Branch (leave empty to skip)'
         required: false
         # default ksu branch
         default: 'master'
@@ -94,9 +94,10 @@ jobs:
           echo "DEVICE=$DEVICE" >> $GITHUB_ENV
           echo "DEFCONFIG=$DEFCONFIG" >> $GITHUB_ENV
 
-          # Logic: Only run KSU if ksu_source is NOT empty
-          if [ ! -z "${{ github.event.inputs.ksu_source }}" ]; then
-              curl -LSs "${{ github.event.inputs.ksu_source }}" | bash -s ${{ github.event.inputs.ksu_branch }}
+          # HARD CHECK: Only proceed if input starts with http
+          KSU_INPUT="${{ github.event.inputs.ksu_source }}"
+          if [[ "$KSU_INPUT" == http* ]]; then
+              curl -LSs "$KSU_INPUT" | bash -s ${{ github.event.inputs.ksu_branch }}
               
               if [ -d "drivers/kernelsu" ]; then KSU_TYPE="KernelSU"; KSU_REPO="backslashxx/KernelSU"; 
               elif [ -d "drivers/ksu" ]; then KSU_TYPE="KernelSU-Next"; KSU_REPO="tiann/KernelSU"; 
@@ -116,6 +117,7 @@ jobs:
                 curl -L "$APK_URL" -o "../${KSU_TYPE}_Manager_${KSU_VER}.apk"
               fi
           else
+              # If box is cleared, spaces only, or deleted, we hit this
               echo "KSU_INFO=None" >> $GITHUB_ENV
           fi
 

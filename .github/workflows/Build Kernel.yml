@@ -11,7 +11,7 @@ on:
       kernel_branch:
         description: 'Kernel Branch'
         required: true
-        # default ksu branch
+        # default kernel branch
         default: '16.0-KSU'
       clang_url:
         description: 'Clang Link'
@@ -40,20 +40,16 @@ on:
         default: 'master'
 
 env:
-
-  BUILD_HOST: ReviveMeJett         # Zip Name Prefix
-  BUILD_USER: dantepaulxd          # Kernel Builder Name
-  
-  USE_LLVM: 1                      # 1 for Clang/LLVM, 0 for GCC
-  USE_KSU: true                    # Toggle KernelSU integration
-  NO_ERROR_ON_MISMATCH: y          # Ignore non-critical compiler warnings (y/n)
-  
-
-  POST_AS_DRAFT: true              # true = Draft, false = Public Release
-  INCLUDE_DATE: true               # Add date/time suffix to zip name
-  FETCH_KSU_APK: true              # Download & include KSU Manager APK in release
-  
-  EXTRA_MAKE_FLAGS: ""             # Example: "LLVM_IAS=1"
+  BUILD_HOST: ReviveMeJett
+  BUILD_USER: dantepaulxd
+  USE_LLVM: 1
+  USE_KSU: true
+  NO_ERROR_ON_MISMATCH: y
+  POST_AS_DRAFT: true
+  INCLUDE_DATE: true
+  FETCH_KSU_APK: true
+  INCLUDE_KSU_VERSION: true
+  EXTRA_MAKE_FLAGS: ""
 
 jobs:
   build-kernel:
@@ -107,7 +103,12 @@ jobs:
               
               KSU_DATA=$(curl -s https://api.github.com/repos/$KSU_REPO/releases/latest)
               KSU_VER=$(echo $KSU_DATA | jq -r .tag_name)
-              echo "KSU_INFO=${KSU_TYPE}-${KSU_VER}" >> $GITHUB_ENV
+              
+              if [ "${{ env.INCLUDE_KSU_VERSION }}" = "true" ]; then
+                echo "KSU_INFO=${KSU_TYPE}-${KSU_VER}" >> $GITHUB_ENV
+              else
+                echo "KSU_INFO=${KSU_TYPE}" >> $GITHUB_ENV
+              fi
               
               if [ "${{ env.FETCH_KSU_APK }}" = "true" ]; then
                 APK_URL=$(echo $KSU_DATA | jq -r '.assets[] | select(.name | contains("apk")) | .browser_download_url' | head -n 1)

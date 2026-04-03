@@ -15,7 +15,7 @@ An automated GitHub Action for compiling Android kernels with integrated KernelS
 | `BUILD_HOST` | `ReviveMeJett` | Prefix for the ZIP and Release name. |
 | `BUILD_USER` | `dantepaulxd` | Prefix for the kernel version info. |
 | `USE_LLVM` | `1` | `1` to build with Clang/LLVM, `0` for GCC. |
-| `USE_KSU` | `true` | Set to `false` to skip KernelSU patching. |
+| `USE_KSU` | `true` | Set to `false` to skip KernelSU also disable other ksu flags. |
 | `FETCH_KSU_APK` | `true` | Add latest matching KSU manager apk in release page. |
 | `INCLUDE_KSU_VERSION`| `true` | Set to `false` to skip KSU version tag in file name. |
 | `NO_ERROR_ON_MISMATCH` | `y` | Ignores non-critical warnings to prevent build failure. |

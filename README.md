@@ -7,36 +7,24 @@ An automated GitHub Action for compiling Android kernels with integrated KernelS
 ## 🚀 Getting Started
 
 1. **Fork** this repository.
-2. (Optional) Edit the `env:` section in `.github/workflows/build.yml` to change your builder name or toggle features.
-3. Go to **Actions** -> **Build Kernel** -> **Run workflow**.
+2. Open `.github/workflows/build.yml` and look at the `env:` section at the top.
+3. Edit the **Links**, **Branches**, and **Flags** to match your device.
+4. Go to **Actions** -> select **Build Kernel** -> click **Run workflow**.
 
 ---
 
-## ⚙️ Configuration Guide
+## ⚙️ Configuration Flags (In `build.yml`)
 
-Users who fork this repo can customize these flags in the `env:` block:
-
-| Flag Name | Default | Description |
-| :--- | :--- | :--- |
-| `BUILD_HOST` | `ReviveMeJett` | Prefix for the ZIP and Release name. |
-| `BUILD_USER` | `dantepaulxd` | Name appearing in the kernel version info. |
-| `USE_LLVM` | `1` | `1` to build with Clang, `0` for GCC. |
-| `USE_KSU` | `true` | Set to `false` to skip KernelSU integration. |
-| `NO_ERROR_ON_MISMATCH` | `y` | Skips minor compiler errors (useful for modern toolchains). |
-| `POST_AS_DRAFT` | `true` | Creates a Draft Release by default. |
-| `INCLUDE_DATE` | `true` | Adds timestamp to filename. |
-| `INCLUDE_VERSION` | `true` | Adds auto-fetched kernel version (e.g. `v4.14.212`) to filename. |
-| `EXTRA_MAKE_FLAGS` | `""` | Add extra flags here (Example: `"LLVM_IAS=1"`). |
+| Variable | Description |
+| :--- | :--- |
+| `KERNEL_SOURCE` | Link to your kernel repository. |
+| `KERNEL_BRANCH` | The branch you want to build. |
+| `CLANG_URL` | Link to Clang toolchain (git or tar.gz). |
+| `AK3_SOURCE` | AnyKernel3 repository link. |
+| `KSU_SOURCE` | KernelSU setup script link. |
+| `BUILD_HOST` | Name of your kernel (used for the zip name). |
+| `FETCH_KSU_APK` | Set to `true` to bundle the KSU Manager APK in your release. |
 
 ---
 
-## 📝 Features
-
-* **Auto-Version Fetch:** Automatically reads the kernel version from your `Makefile`.
-* **Smart Naming:** Filenames follow: `{Host}{Version}_{KSU}_{Device}_{Date}.zip`.
-* **KSU Manager Bundling:** Identifies KSU type from link and bundles the correct Manager APK automatically.
-* **Universal Build:** Supports Clang/LLVM by default and identifies boot images automatically.
-
----
-
-**Made with ❤️ by Dante**
+**Made with ❤️ by [@dantepaulxd](https://github.com/dpxdoss)**
